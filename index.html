@@ -4,6 +4,8 @@
 		<meta charset="UTF-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 		<title>便签墙</title>
+		<link rel="preconnect" href="https://er-sycdn.kuwo.cn" crossorigin>
+		<link rel="preload" as="audio" href="https://er-sycdn.kuwo.cn/e9c282d09505555326ebc12270e3f6be/690413c2/resource/30106/trackmedia/C200004A5exG06C63T.m4a?from=vip" crossorigin>
 		<style>
 			* {
 				box-sizing: border-box;
@@ -192,6 +194,30 @@
 	</head>
 	<body>
 		<div id="board"></div>
+
+		<!-- 背景音乐：使用你提供的链接，尽快开始播放 -->
+		<audio id="bgm" src="https://er-sycdn.kuwo.cn/e9c282d09505555326ebc12270e3f6be/690413c2/resource/30106/trackmedia/C200004A5exG06C63T.m4a?from=vip" preload="auto" loop autoplay playsinline></audio>
+		<script>
+			// 尽快触发播放，不等待 DOMContentLoaded
+			const bgm = document.getElementById('bgm')
+			bgm.autoplay = true
+			bgm.muted = false
+			bgm.load()
+			bgm.play().catch(() => {})
+
+			// 音频就绪、页面可见时再次尝试，避免被策略拦截
+			bgm.addEventListener('canplay', () => {
+				if (bgm.paused) bgm.play().catch(() => {})
+			})
+			document.addEventListener('visibilitychange', () => {
+				if (!document.hidden && bgm.paused) bgm.play().catch(() => {})
+			})
+
+			// 首次点击兜底
+			document.addEventListener('click', () => {
+				if (bgm.paused) bgm.play().catch(() => {})
+			}, { once: true })
+		</script>
 
 		<script>
 			const board = document.getElementById('board')
@@ -547,7 +573,7 @@
 							<button class="control minimize" type="button" aria-label="最小化"></button>
 							<button class="control maximize" type="button" aria-label="最大化"></button>
 						</div>
-						<div class="card-title">敏宝天天开心</div>
+						<div class="card-title">天天开心</div>
 					</div>
 					<div class="card-body">${randomFrom(messages)}</div>
 				`
