@@ -195,49 +195,67 @@
 	<body>
 		<div id="board"></div>
 
-		<!-- 背景音乐：使用你提供的链接，尽快开始播放 -->
-		<audio id="bgm" src="https://er-sycdn.kuwo.cn/e9c282d09505555326ebc12270e3f6be/690413c2/resource/30106/trackmedia/C200004A5exG06C63T.m4a?from=vip" preload="auto" loop autoplay playsinline></audio>
+		<!-- 背景音乐：使用你提供的链接，点击“确定”后播放 -->
+		<audio id="bgm" src="https://er-sycdn.kuwo.cn/e9c282d09505555326ebc12270e3f6be/690413c2/resource/30106/trackmedia/C200004A5exG06C63T.m4a?from=vip" preload="auto" loop playsinline></audio>
+		<style>
+			.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.35); display: flex; align-items: center; justify-content: center; z-index: 1000001; }
+			.modal-card { width: 300px; background:#fff; border-radius:12px; box-shadow:0 16px 35px rgba(0,0,0,.2); overflow:hidden; }
+			.modal-title { padding:12px 16px; font-size:16px; font-weight:600; border-bottom:1px solid rgba(0,0,0,0.08); }
+			.modal-body { padding:16px; font-size:14px; color: rgba(0,0,0,.75); }
+			.modal-confirm { margin: 0 16px 16px; padding: 8px 12px; width: calc(100% - 32px); background:#2b6cb0; color:#fff; border:none; border-radius:8px; cursor:pointer; }
+			.modal-confirm:hover { background:#2c5282; }
+		</style>
+		<div id="musicModal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="musicModalTitle">
+			<div class="modal-card">
+				<div id="musicModalTitle" class="modal-title">作者:小龙子</div>
+				<div class="modal-body">单击'确定'进入全屏/'ESC键'退出全屏</div>
+				<button id="confirmPlay" class="modal-confirm" type="button">确定</button>
+			</div>
+		</div>
 		<script>
-			// 尽快触发播放，不等待 DOMContentLoaded
-			const bgm = document.getElementById('bgm')
-			bgm.autoplay = true
-			bgm.muted = false
-			bgm.load()
-			bgm.play().catch(() => {})
+			const bgm = document.getElementById('bgm');
+			const modal = document.getElementById('musicModal');
+			const confirmBtn = document.getElementById('confirmPlay');
+			// 页面加载时展示弹窗
+			modal.style.display = 'flex';
+			bgm.load();
+			confirmBtn.addEventListener('click', () => {
+				// 进入全屏（需用户点击手势触发）
+				const root = document.documentElement;
+				if (!document.fullscreenElement && root.requestFullscreen) {
+					root.requestFullscreen({ navigationUI: 'hide' }).catch(() => {});
+				}
 
-			// 音频就绪、页面可见时再次尝试，避免被策略拦截
-			bgm.addEventListener('canplay', () => {
-				if (bgm.paused) bgm.play().catch(() => {})
-			})
-			document.addEventListener('visibilitychange', () => {
-				if (!document.hidden && bgm.paused) bgm.play().catch(() => {})
-			})
-
-			// 首次点击兜底
-			document.addEventListener('click', () => {
-				if (bgm.paused) bgm.play().catch(() => {})
-			}, { once: true })
+				// 播放背景音乐
+				bgm.play().then(() => {
+					modal.remove();
+				}).catch(() => {
+					// 播放失败则保留弹窗以便用户再次点击
+				});
+			});
 		</script>
 
 		<script>
 			const board = document.getElementById('board')
 			const messages = [
-				'保持好心情',
+				'每天保持好心情',
+				'敏宝天天开心~',
 				'多喝水哦',
 				'今天辛苦啦',
 				'早点休息',
 				'记得吃水果',
 				'加油，你可以的',
-				'祝你顺利',
 				'保持微笑呀',
 				'愿所有烦恼都消失',
 				'期待下一次见面',
 				'梦想总会实现',
+				'我喜欢你',
 				'天气冷了，多穿衣服',
 				'记得给自己放松',
 				'每天都要元气满满',
 				'今天也要好好爱自己',
-				'适当休息一下'
+				'记得想我哦'
+
 			]
 
 			const colors = [
@@ -573,7 +591,7 @@
 							<button class="control minimize" type="button" aria-label="最小化"></button>
 							<button class="control maximize" type="button" aria-label="最大化"></button>
 						</div>
-						<div class="card-title">敏宝天天开心</div>
+						<div class="card-title">敏宝注意:</div>
 					</div>
 					<div class="card-body">${randomFrom(messages)}</div>
 				`
