@@ -191,8 +191,18 @@
 				}
 			}
 		</style>
+		<style>
+			/* 背景烟花画布（在弹窗背景后面） */
+			#fireworks-canvas {
+				position: fixed;
+				inset: 0;
+				pointer-events: none;
+				z-index: 1000000; /* 比弹窗(1000001)低，保证在其后面 */
+			}
+		</style>
 	</head>
 	<body>
+		<canvas id="fireworks-canvas"></canvas>
 		<div id="board"></div>
 
 		<!-- 背景音乐：使用你提供的链接，点击“确定”后播放 -->
@@ -233,6 +243,145 @@
 					// 播放失败则保留弹窗以便用户再次点击
 				});
 			});
+		</script>
+
+		<script>
+			(function () {
+				const canvas = document.getElementById('fireworks-canvas');
+				if (!canvas) return;
+				const ctx = canvas.getContext('2d');
+
+				// 参数（可根据需要微调）
+				const spawnInterval = 700;   // 自动发射间隔（毫秒）
+				const maxRockets = 5;        // 同屏最多上升火箭
+				const maxParticles = 600;    // 粒子总量上限
+				const gravity = 0.035;       // 重力
+				const friction = 0.985;      // 摩擦（越小扩散越大）
+				const colors = ['#ff2d2d', '#ffd700', '#32cd32', '#00bfff', '#ff69b4', '#ffa500'];
+
+				let width = 0, height = 0, dpr = 1;
+				let rockets = [];
+				let particles = [];
+				let lastSpawn = 0;
+
+				function resize() {
+					dpr = Math.max(1, window.devicePixelRatio || 1);
+					width = window.innerWidth;
+					height = window.innerHeight;
+					canvas.style.width = width + 'px';
+					canvas.style.height = height + 'px';
+					canvas.width = Math.floor(width * dpr);
+					canvas.height = Math.floor(height * dpr);
+					ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+					ctx.globalCompositeOperation = 'lighter';
+				}
+				resize();
+				window.addEventListener('resize', resize);
+
+				function rand(min, max) { return Math.random() * (max - min) + min; }
+				function pick(arr) { return arr[(Math.random() * arr.length) | 0]; }
+
+				class Rocket {
+					constructor(x) {
+						this.x = x != null ? x : rand(width * 0.2, width * 0.8);
+						this.y = height + rand(10, 40);
+						this.vx = rand(-1.5, 1.5);
+						this.vy = -rand(7, 12);
+						this.color = pick(colors);
+						this.targetY = rand(height * 0.25, height * 0.55);
+						this.exploded = false;
+					}
+					update() {
+						this.vy += gravity * 0.6; // 上升阶段重力稍小
+						this.x += this.vx;
+						this.y += this.vy;
+						if (!this.exploded && (this.y <= this.targetY || this.vy > -1)) {
+							this.explode();
+						}
+					}
+					draw() {
+						ctx.save();
+						ctx.shadowColor = this.color;
+						ctx.shadowBlur = 10;
+						ctx.globalAlpha = 0.9;
+						ctx.fillStyle = this.color;
+						ctx.beginPath();
+						ctx.arc(this.x, this.y, 2.2, 0, Math.PI * 2);
+						ctx.fill();
+						ctx.restore();
+					}
+					explode() {
+						this.exploded = true;
+						const count = (rand(40, 90)) | 0;
+						for (let i = 0; i < count; i++) {
+							const angle = (i / count) * Math.PI * 2;
+							const speed = rand(2.5, 6.5);
+							const p = new Particle(this.x, this.y, this.color);
+							p.vx = Math.cos(angle) * speed + rand(-0.6, 0.6);
+							p.vy = Math.sin(angle) * speed + rand(-0.6, 0.6);
+							particles.push(p);
+						}
+					}
+				}
+
+				class Particle {
+					constructor(x, y, color) {
+						this.x = x; this.y = y;
+						this.vx = rand(-3, 3);
+						this.vy = rand(-3, 3);
+						this.size = rand(1.2, 2.6);
+						this.alpha = 1;
+						this.color = color;
+						this.decay = rand(0.010, 0.020);
+						this.tilt = rand(-0.02, 0.02);
+					}
+					update() {
+						this.vx *= friction;
+						this.vy *= friction;
+						this.vy += gravity;
+						this.x += this.vx + this.tilt;
+						this.y += this.vy;
+						this.size *= 0.995;
+						this.alpha -= this.decay;
+					}
+					draw() {
+						if (this.alpha <= 0 || this.size <= 0.2) return;
+						ctx.save();
+						ctx.globalAlpha = Math.max(0, this.alpha);
+						ctx.shadowColor = this.color;
+						ctx.shadowBlur = 12;
+						ctx.fillStyle = this.color;
+						ctx.beginPath();
+						ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+						ctx.fill();
+						ctx.restore();
+					}
+				}
+
+				function spawnRocket(x) { if (rockets.length >= maxRockets) return; rockets.push(new Rocket(x)); }
+
+				function frame(t) {
+					ctx.clearRect(0, 0, width, height);
+					if (t - lastSpawn > spawnInterval) { spawnRocket(); lastSpawn = t; }
+					for (let i = rockets.length - 1; i >= 0; i--) {
+						const r = rockets[i]; r.update(); r.draw(); if (r.exploded || r.y < -50) { rockets.splice(i, 1); }
+					}
+					if (particles.length > maxParticles) { particles.splice(0, particles.length - maxParticles); }
+					for (let i = particles.length - 1; i >= 0; i--) {
+						const p = particles[i]; p.update(); p.draw(); if (p.alpha <= 0 || p.y > height + 50) { particles.splice(i, 1); }
+					}
+					requestAnimationFrame(frame);
+				}
+				requestAnimationFrame(frame);
+
+				function clickHandler(e) {
+					const x = (e.clientX != null ? e.clientX : (e.touches && e.touches[0].clientX)) || width / 2;
+					const burst = (rand(2, 4)) | 0;
+					for (let i = 0; i < burst; i++) { spawnRocket(x + rand(-40, 40)); }
+				}
+				window.addEventListener('click', clickHandler, { passive: true });
+				window.addEventListener('touchstart', clickHandler, { passive: true });
+			})();
 		</script>
 
 		<script>
@@ -653,4 +802,137 @@
 			})
 		</script>
 	</body>
+</html>
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8" />
+    <title>飘落动漫爱心效果</title>
+    <style>
+        /* 覆盖层容器 */
+        #hearts-container {
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            overflow: hidden;
+            z-index: 9999;
+        }
+
+        /* 心形元素：用一个方块加两个圆组合成心形 */
+        .heart {
+            position: absolute;
+            top: -10vh;
+            left: 50%;
+            width: var(--size, 18px);
+            height: var(--size, 18px);
+            background: var(--color, #ff6f91);
+            transform: rotate(-45deg);
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,.18)) drop-shadow(0 0 6px rgba(255,255,255,.6));
+            animation: fall var(--duration, 8s) linear var(--delay, 0s) forwards;
+            opacity: 0;
+        }
+
+        .heart::before, .heart::after {
+            content: "";
+            position: absolute;
+            width: var(--size, 18px);
+            height: var(--size, 18px);
+            background: var(--color, #ff6f91);
+            border-radius: 50%;
+        }
+        /* 左上圆 */
+        .heart::before {
+            top: calc(var(--size, 18px) * -0.5);
+            left: 0;
+        }
+        /* 右上圆 */
+        .heart::after {
+            top: 0;
+            left: calc(var(--size, 18px) * 0.5);
+        }
+
+        /* 下落动画：带旋转和轻微缩放，营造“动漫感” */
+        @keyframes fall {
+            0% {
+                transform: translateY(-10vh) rotate(-45deg) scale(0.9);
+                opacity: 0;
+            }
+            10% {
+                opacity: 1;
+            }
+            50% {
+                transform: translateY(50vh) rotate(135deg) scale(1.05);
+                opacity: 1;
+            }
+            100% {
+                transform: translateY(110vh) rotate(315deg) scale(1.15);
+                opacity: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="hearts-container"></div>
+
+    <script>
+        (function () {
+            const container = document.getElementById('hearts-container');
+
+            // 可自行修改的颜色组（偏“动漫粉”）
+            const colors = [
+                '#ff4d6d', '#ff6f91', '#ff85a1', '#ff99cc',
+                '#fc2b64', '#f05475', '#e94057', '#fda4af'
+            ];
+
+            // 调整频率和并发数量
+            const density = 280; // 心生成的时间间隔（毫秒）
+            const maxHearts = 60; // 同时最多存在的心形数量
+
+            let liveHearts = 0;
+
+            function spawnHeart() {
+                const heart = document.createElement('div');
+                heart.className = 'heart';
+
+                // 随机大小、颜色、位置、时长与延迟
+                const size = 12 + Math.random() * 20;           // 12px ~ 32px
+                const duration = 6 + Math.random() * 6;         // 6s ~ 12s
+                const delay = -Math.random() * 3;               // 负延迟，打散起始相位
+                const leftPercent = Math.random() * 100;        // 0% ~ 100%
+                const color = colors[Math.floor(Math.random() * colors.length)];
+
+                heart.style.setProperty('--size', size + 'px');
+                heart.style.setProperty('--color', color);
+                heart.style.setProperty('--duration', duration + 's');
+                heart.style.setProperty('--delay', delay + 's');
+                heart.style.left = leftPercent + '%';
+
+                container.appendChild(heart);
+                liveHearts++;
+
+                // 在动画结束后移除 DOM，避免堆积
+                const life = (duration) * 1000;
+                setTimeout(() => {
+                    heart.remove();
+                    liveHearts--;
+                }, life + 1000);
+            }
+
+            // 定时生成
+            const timer = setInterval(() => {
+                if (liveHearts < maxHearts) {
+                    spawnHeart();
+                }
+            }, density);
+
+            // 交互：点击屏幕触发一小波“连发”
+            window.addEventListener('click', () => {
+                const burst = 10;
+                for (let i = 0; i < burst; i++) {
+                    setTimeout(spawnHeart, i * 70);
+                }
+            });
+        })();
+    </script>
+    </body>
 </html>
