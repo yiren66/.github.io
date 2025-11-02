@@ -219,7 +219,107 @@
 			// 页面加载时展示弹窗
 			modal.style.display = 'flex';
 			bgm.load();
+
+			function showWelcome() {
+				const prefersReduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+			
+				const style = document.createElement('style');
+				style.textContent = `
+				@keyframes wobble { from { transform: translateY(0) rotate(-1deg); } to { transform: translateY(-2px) rotate(1.2deg); } }
+				`;
+				document.head.appendChild(style);
+			
+				const overlay = document.createElement('div');
+				overlay.style.position = 'fixed';
+				overlay.style.inset = '0';
+				overlay.style.display = 'flex';
+				overlay.style.alignItems = 'center';
+				overlay.style.justifyContent = 'center';
+				overlay.style.pointerEvents = 'none';
+				overlay.style.zIndex = '1000002';
+			
+				// 柔焦半透明“气泡”底板，提升可读性且更卡通
+				const plate = document.createElement('div');
+				plate.style.position = 'relative';
+				plate.style.padding = '0.25em 0.55em';
+				plate.style.borderRadius = '28px';
+				plate.style.background = 'rgba(255,255,255,0.18)';
+				plate.style.backdropFilter = 'blur(4px) saturate(120%)';
+				plate.style.boxShadow = '0 12px 28px rgba(255,150,210,0.25), 0 8px 18px rgba(255,126,219,0.22)';
+			
+				const container = document.createElement('div');
+				container.style.display = 'inline-block';
+				container.style.fontFamily = "'Microsoft YaHei', 'PingFang SC', 'Noto Sans SC', 'Trebuchet MS', 'Segoe UI', system-ui, -apple-system, sans-serif";
+				container.style.fontWeight = '900';
+				container.style.fontSize = 'clamp(34px, 9vw, 110px)';
+				container.style.letterSpacing = '0.02em';
+				// 白描边 + 彩色发光 + 明亮渐变，更动漫卡通
+				container.style.backgroundImage = 'linear-gradient(135deg, #ff6fae 0%, #ff9acb 50%, #ffd1e8 100%)';
+				container.style.backgroundClip = 'text';
+				container.style.webkitBackgroundClip = 'text';
+				container.style.color = 'transparent';
+				container.style.webkitTextStroke = '2px rgba(255,255,255,0.90)';
+				container.style.textShadow = [
+					'0 0 8px rgba(255,160,220,0.60)',
+					'0 0 16px rgba(255,126,219,0.45)',
+					'0 6px 18px rgba(0,0,0,0.20)'
+				].join(', ');
+			
+				const text = '欢迎敏宝宝观看';
+				const chars = Array.from(text);
+			
+				chars.forEach((ch, i) => {
+					const span = document.createElement('span');
+					span.textContent = ch;
+					span.style.display = 'inline-block';
+					span.style.opacity = '0';
+					span.style.transform = 'translateY(16px) scale(0.88)';
+					span.style.filter = 'blur(2px)';
+					span.style.transition = 'opacity 1100ms ease, transform 1100ms cubic-bezier(0.16, 1, 0.3, 1), filter 1100ms ease';
+					// 轻柔彩色光晕，避免厚重的黑色轮廓
+					span.style.textShadow = [
+						'0 0 6px rgba(255,160,220,0.45)',
+						'0 0 10px rgba(255,126,219,0.32)'
+					].join(', ');
+					container.appendChild(span);
+			
+					if (!prefersReduce) {
+						setTimeout(() => {
+							span.style.opacity = '1';
+							span.style.transform = 'translateY(0) scale(1)';
+							span.style.filter = 'blur(0)';
+							span.style.animation = 'wobble 1.8s ease-in-out infinite alternate';
+							span.style.animationDelay = (600 + i * 90) + 'ms';
+						}, 120 + i * 120);
+					} else {
+						span.style.opacity = '1';
+						span.style.transform = 'none';
+						span.style.filter = 'none';
+					}
+				});
+			
+				plate.appendChild(container);
+				overlay.appendChild(plate);
+				document.body.appendChild(overlay);
+			
+				const totalReveal = prefersReduce ? 0 : (120 + (chars.length - 1) * 120 + 1100);
+				const hold = 1800;
+			
+				setTimeout(() => {
+					plate.style.transition = 'opacity 1400ms ease, transform 1400ms ease, filter 1400ms ease';
+					plate.style.opacity = '0';
+					plate.style.transform = 'translateY(-6px) scale(0.98)';
+					plate.style.filter = 'blur(1px)';
+					plate.addEventListener('transitionend', () => {
+						overlay.remove();
+						style.remove();
+					}, { once: true });
+				}, totalReveal + hold);
+			}
+
 			confirmBtn.addEventListener('click', () => {
+				// 展示欢迎文字动画
+				showWelcome();
 				// 进入全屏（需用户点击手势触发）
 				const root = document.documentElement;
 				if (!document.fullscreenElement && root.requestFullscreen) {
