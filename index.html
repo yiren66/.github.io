@@ -318,20 +318,40 @@
 			}
 
 			confirmBtn.addEventListener('click', () => {
+				// 防多次点击触发
+				confirmBtn.disabled = true;
+
+				// 立即关闭弹窗（不再依赖音乐播放结果）
+				modal.remove();
+
 				// 展示欢迎文字动画
 				showWelcome();
+
 				// 进入全屏（需用户点击手势触发）
 				const root = document.documentElement;
 				if (!document.fullscreenElement && root.requestFullscreen) {
 					root.requestFullscreen({ navigationUI: 'hide' }).catch(() => {});
 				}
 
-				// 播放背景音乐
-				bgm.play().then(() => {
-					modal.remove();
-				}).catch(() => {
-					// 播放失败则保留弹窗以便用户再次点击
-				});
+				// 音乐播放后备方案：先尝试本地，失败则回退到远程
+				const candidates = [
+					'./assets/bgm.mp3',
+					bgm.src
+				].filter(Boolean);
+				let idx = 0;
+				const attempt = () => {
+					bgm.src = candidates[idx];
+					bgm.load();
+					bgm.play().catch(() => {
+						idx++;
+						if (idx < candidates.length) {
+							attempt();
+						} else {
+							console.warn('背景音乐未能播放，已跳过。');
+						}
+					});
+				};
+				attempt();
 			});
 		</script>
 
