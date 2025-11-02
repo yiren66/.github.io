@@ -5,7 +5,7 @@
 		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 		<title>欢迎敏宝~</title>
 		<link rel="preconnect" href="https://er-sycdn.kuwo.cn" crossorigin>
-		<link rel="preload" as="audio" href="https://m701.music.126.net/20251102120039/a053d0f43fb3bc04be48dd64ca811f73/jdymusic/obj/wo3DlMOGwrbDjj7DisKw/19367504866/32ab/a7b5/04dd/894ec309896d83aa18b422b34ad2bdea.flac?vuutv=rO0b11LWuHeGFqAlgtJVHlgq66UV0nNlLF12wd9Bq0xdHvw4fdnyrA8PBfKxtxBlXyXLxcIDYY8tuKWMJttlYss6kGcOwJ43DXT41+9Vpyg=" crossorigin>
+		<link rel="preload" as="audio" href="https://m10.music.126.net/20251102125802/91d2b6a58962f3bd7c7a145eba076039/yyaac/obj/wonDkMOGw6XDiTHCmMOi/14054116608/1f21/cbb3/1a67/b875b4ffe7c4072fea9bbfeafc7553eb.m4a?vuutv=xQEke2ITD9YMvcRt+/aUAwyied872D2Z2V15knwH+3S9XNrwb5KXEFqH4wmb0C4mzrbQbd+vpsvJ0EiueCE9+qmrTAG5FfRoHd14JbJR7lQ=&cdntag=bWFyaz1vc193ZWIscXVhbGl0eV9leGhpZ2g" crossorigin>
 		<style>
 			* {
 				box-sizing: border-box;
@@ -196,7 +196,7 @@
 		<div id="board"></div>
 
 		<!-- 背景音乐：使用你提供的链接，点击“确定”后播放 -->
-		<audio id="bgm" src="https://m701.music.126.net/20251102120039/a053d0f43fb3bc04be48dd64ca811f73/jdymusic/obj/wo3DlMOGwrbDjj7DisKw/19367504866/32ab/a7b5/04dd/894ec309896d83aa18b422b34ad2bdea.flac?vuutv=rO0b11LWuHeGFqAlgtJVHlgq66UV0nNlLF12wd9Bq0xdHvw4fdnyrA8PBfKxtxBlXyXLxcIDYY8tuKWMJttlYss6kGcOwJ43DXT41+9Vpyg=" preload="auto" loop playsinline></audio>
+		<audio id="bgm" src="https://m10.music.126.net/20251102130949/c586c0332df059c20329ab6585792d21/yyaac/obj/wonDkMOGw6XDiTHCmMOi/14053021656/1bcd/7989/f218/9eaa7be78062f2471eabb183fa059405.m4a?vuutv=CVy6GMdUctufKlhsXjcQW8TxgVX3wfw302iIzOAkrAU7CIKqL2waBstVtORtT8M68RVdchxXjIOwKBawi7x5kdMtCOxzunhhRpuy1zVKrZI=&cdntag=bWFyaz1vc193ZWIscXVhbGl0eV9leGhpZ2g" preload="auto" loop playsinline></audio>
 		<style>
 			.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.35); display: flex; align-items: center; justify-content: center; z-index: 1000001; }
 			.modal-card { width: 300px; background:#fff; border-radius:12px; box-shadow:0 16px 35px rgba(0,0,0,.2); overflow:hidden; }
@@ -333,21 +333,40 @@
 					root.requestFullscreen({ navigationUI: 'hide' }).catch(() => {});
 				}
 
-				// 音乐播放修复：直接播放已定义的音频元素，设置音量确保可听见
-				bgm.volume = 0.5; // 设置合适的音量
-				bgm.play().then(() => {
-					console.log('音乐播放成功');
-				}).catch(error => {
-					console.warn('音乐播放失败:', error);
-					// 尝试备用方法：创建一个新的音频元素
-					const backupAudio = new Audio();
-					backupAudio.src = bgm.src;
-					backupAudio.volume = 0.5;
-					backupAudio.loop = true;
-					backupAudio.play().catch(err => {
-						console.error('备用方法也失败:', err);
-					});
-				});
+				// 修复音乐播放：简化播放逻辑，确保音量足够大
+				try {
+					// 确保音频元素存在且有src
+					if (bgm && bgm.src) {
+						// 设置更大的音量确保能听到
+						bgm.volume = 0.8;
+						bgm.loop = true;
+						
+						// 直接播放，使用用户手势触发
+						bgm.play().then(() => {
+							console.log('音乐播放成功');
+						}).catch(error => {
+							console.warn('主要方法播放失败:', error);
+							
+							// 备用方法：创建新音频元素
+							const backupAudio = new Audio(bgm.src);
+							backupAudio.volume = 0.8;
+							backupAudio.loop = true;
+							backupAudio.play().catch(err => {
+								console.error('备用方法也失败:', err);
+								
+								// 最后的尝试：添加到DOM后播放
+								backupAudio.setAttribute('controls', 'controls');
+								document.body.appendChild(backupAudio);
+								backupAudio.style.position = 'fixed';
+								backupAudio.style.bottom = '20px';
+								backupAudio.style.right = '20px';
+								backupAudio.style.zIndex = '9999';
+							});
+						});
+					}
+				} catch (e) {
+					console.error('音乐播放异常:', e);
+				}
 			});
 		</script>
 
