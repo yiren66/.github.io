@@ -321,37 +321,33 @@
 				// 防多次点击触发
 				confirmBtn.disabled = true;
 
-				// 立即关闭弹窗（不再依赖音乐播放结果）
+				// 立即关闭弹窗
 				modal.remove();
 
 				// 展示欢迎文字动画
 				showWelcome();
 
-				// 进入全屏（需用户点击手势触发）
+				// 进入全屏
 				const root = document.documentElement;
 				if (!document.fullscreenElement && root.requestFullscreen) {
 					root.requestFullscreen({ navigationUI: 'hide' }).catch(() => {});
 				}
 
-				// 音乐播放后备方案：先尝试本地，失败则回退到远程
-				const candidates = [
-					'./assets/bgm.mp3',
-					bgm.src
-				].filter(Boolean);
-				let idx = 0;
-				const attempt = () => {
-					bgm.src = candidates[idx];
-					bgm.load();
-					bgm.play().catch(() => {
-						idx++;
-						if (idx < candidates.length) {
-							attempt();
-						} else {
-							console.warn('背景音乐未能播放，已跳过。');
-						}
+				// 音乐播放修复：直接播放已定义的音频元素，设置音量确保可听见
+				bgm.volume = 0.5; // 设置合适的音量
+				bgm.play().then(() => {
+					console.log('音乐播放成功');
+				}).catch(error => {
+					console.warn('音乐播放失败:', error);
+					// 尝试备用方法：创建一个新的音频元素
+					const backupAudio = new Audio();
+					backupAudio.src = bgm.src;
+					backupAudio.volume = 0.5;
+					backupAudio.loop = true;
+					backupAudio.play().catch(err => {
+						console.error('备用方法也失败:', err);
 					});
-				};
-				attempt();
+				});
 			});
 		</script>
 
